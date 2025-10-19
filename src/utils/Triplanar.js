@@ -1,6 +1,5 @@
 export function useTriplanarProjection(material) {
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.tilingFactor = { value: 1.0 };
     shader.uniforms.sharpness = { value: 4.0 }; // higher = crisper transitions
 
     shader.vertexShader = `
@@ -26,7 +25,6 @@ export function useTriplanarProjection(material) {
       );
 
     shader.fragmentShader = `
-        uniform float tilingFactor;
         uniform float sharpness;
         varying vec3 vWorldPosition;
         varying vec3 vWorldNormal;
@@ -44,9 +42,9 @@ export function useTriplanarProjection(material) {
           vec2 uvY = vWorldPosition.xz; // along Y
           vec2 uvZ = vWorldPosition.xy; // along Z
     
-          vec4 cx = texture2D(map, uvX * tilingFactor);
-          vec4 cy = texture2D(map, uvY * tilingFactor);
-          vec4 cz = texture2D(map, uvZ * tilingFactor);
+          vec4 cx = texture2D(map, uvX);
+          vec4 cy = texture2D(map, uvY);
+          vec4 cz = texture2D(map, uvZ);
     
           vec4 tri = cx * w.x + cy * w.y + cz * w.z;
           diffuseColor *= tri;

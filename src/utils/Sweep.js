@@ -76,20 +76,37 @@ function orderFromSegments(points) {
 
 export function extractPolylineFromLineObject(lineObj) {
   const geom = lineObj.geometry;
-  const pos = geom.getAttribute("position");
-  if (!pos) throw new Error("Line object has no position attribute");
-
-  // Pull raw points
+  // Use morphed positions if morph targets are present
   let pts = [];
+  const pos = geom.getAttribute("position");
+  const morphInfluences =
+    lineObj.morphTargetInfluences || geom.morphTargetInfluences;
+  const morphAttrs = geom.morphAttributes && geom.morphAttributes.position;
   const index = geom.getIndex();
+
+  function getMorphedPosition(i) {
+    let base = new THREE.Vector3().fromBufferAttribute(pos, i);
+    if (morphAttrs && morphAttrs.length && morphInfluences) {
+      for (let j = 0; j < morphAttrs.length; j++) {
+        const influence = morphInfluences[j] || 0;
+        if (influence !== 0) {
+          const morphAttr = morphAttrs[j];
+          const morph = new THREE.Vector3().fromBufferAttribute(morphAttr, i);
+          base.addScaledVector(morph, influence);
+        }
+      }
+    }
+    return base;
+  }
+
   if (index) {
     for (let i = 0; i < index.count; i++) {
       const ii = index.getX(i);
-      pts.push(new THREE.Vector3().fromBufferAttribute(pos, ii));
+      pts.push(getMorphedPosition(ii));
     }
   } else {
     for (let i = 0; i < pos.count; i++) {
-      pts.push(new THREE.Vector3().fromBufferAttribute(pos, i));
+      pts.push(getMorphedPosition(i));
     }
   }
 
@@ -179,10 +196,10 @@ export function sweepProfileAlongPath({
     color: 0xe7e7e7,
     metalness: 0,
     roughness: 0.5,
+    name: "main_top",
   }),
 }) {
   const profile3D = extractPolylineFromLineObject(profileLineObj);
-  console.log(detectPlaneKindFromBBox(profile3D));
   const profile2D = polyline3Dto2D(profile3D, profilePlane, {
     flipX: flipProfileX,
     flipY: flipProfileY,
